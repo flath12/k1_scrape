@@ -1,4 +1,14 @@
-class SchwabScrape < ApplicationRecord
+require "pdf-reader-turtletext"
+
+file = 'k1.pdf'
+reader = PDF::Reader::Turtletext.new(file)
+print(reader)
+
+loc = reader.text_position("Part I", 1)
+print(loc)
+
+
+class SchwabScrape
 
 def self.test
 	#file = 'D:\RubyData\statements\7053-5344_113016_stmt.pdf'
