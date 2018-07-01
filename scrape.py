@@ -14,7 +14,14 @@ def gen_data(path,pages):
             "withdrawls" : get_withdrawals(pdf),
             "ending_ca" : get_ending_ca(pdf),
             }
+    
     box_data = get_box_detail(pdf)
+    pdf = pdfquery.PDFQuery(path)
+    pdf.load(pages['Item_L_detail'][0]-1)
+    data['summary_income_loss_item_l'] = summary_income_loss_item_l(pdf,pages['Item_L_detail'][0]-1)
+    data['less_deductions_item_l'] = less_deductions_item_l(pdf,pages['Item_L_detail'][0]-1)
+    box_data = calculate_other_income(data,box_data)
+    box_data = calculate_other_deductions(data,box_data)
     data.update(box_data)
     return data
 
@@ -193,7 +200,7 @@ def box_11_2_data(pdf,x_1,x_2):
     bottom_corner_of_next_box = float(label_of_next_box.attr('y0'))
     text = pdf.pq('LTTextLineHorizontal:overlaps_bbox("%s, %s, %s, %s")' % (x_1, bottom_corner_of_next_box+10, x_2-5, bottom_corner-5)).text()
     text = text.split(" ")
-    text = [t for t in text if t == "STMT" or t.isdigit()]
+    text = [t for t in text if t == "STMT" or t.replace('-', '').replace('(', '').replace(')', '').isdigit()]
     if len(text) > 1:
         text = text[1]
         text = clean_box_data_results(text)
@@ -210,7 +217,7 @@ def box_11_3_data(pdf,x_1,x_2):
     bottom_corner_of_next_box = float(label_of_next_box.attr('y0'))
     text = pdf.pq('LTTextLineHorizontal:overlaps_bbox("%s, %s, %s, %s")' % (x_1, bottom_corner_of_next_box+10, x_2-5, bottom_corner-5)).text()
     text = text.split(" ")
-    text = [t for t in text if t == "STMT" or t.isdigit()]
+    text = [t for t in text if t == "STMT" or t.replace('-', '').replace('(', '').replace(')', '').isdigit()]
     if len(text) > 2:
         text = text[2]
         text = clean_box_data_results(text)
@@ -232,7 +239,7 @@ def box_13_1_data(pdf,x_1,x_2):
     bottom_corner_of_next_box = float(label_of_next_box.attr('y0'))
     text = pdf.pq('LTTextLineHorizontal:overlaps_bbox("%s, %s, %s, %s")' % (x_1, bottom_corner_of_next_box+10, x_2-5, bottom_corner-5)).text()
     text = text.split(" ")
-    text = [t for t in text if t == "STMT" or t.isdigit()]
+    text = [t for t in text if t == "STMT" or t.replace('-', '').replace('(', '').replace(')', '').isdigit()]
     if len(text) > 0:
         text = text[0]
         if text == "STMT":
@@ -252,7 +259,7 @@ def box_13_2_data(pdf,x_1,x_2):
     bottom_corner_of_next_box = float(label_of_next_box.attr('y0'))
     text = pdf.pq('LTTextLineHorizontal:overlaps_bbox("%s, %s, %s, %s")' % (x_1, bottom_corner_of_next_box+10, x_2-5, bottom_corner-5)).text()
     text = text.split(" ")
-    text = [t for t in text if t == "STMT" or t.isdigit()]
+    text = [t for t in text if t == "STMT" or t.replace('-', '').replace('(', '').replace(')', '').isdigit()]
     if len(text) > 1:
         text = text[1]
         if text == "STMT":
@@ -272,7 +279,7 @@ def box_13_3_data(pdf,x_1,x_2):
     bottom_corner_of_next_box = float(label_of_next_box.attr('y0'))
     text = pdf.pq('LTTextLineHorizontal:overlaps_bbox("%s, %s, %s, %s")' % (x_1, bottom_corner_of_next_box+10, x_2-5, bottom_corner-5)).text()
     text = text.split(" ")
-    text = [t for t in text if t == "STMT" or t.isdigit()]
+    text = [t for t in text if t == "STMT" or t.replace('-', '').replace('(', '').replace(')', '').isdigit()]
     if len(text) > 2:
         text = text[2]
         if text == "STMT":
@@ -287,6 +294,26 @@ def box_14_data(pdf,x_1,x_2):
     label_string = "Self-employment earnings (loss)"
     data = get_one_box_data_by_label(pdf,label_string,x_1,x_2)
     return data
+
+def summary_income_loss_item_l(pdf,page):
+    label = pdf.pq('LTTextLineHorizontal:contains("INCOME (LOSS) FROM SCH")')
+    left_corner = float(label.attr('x0'))
+    bottom_corner = float(label.attr('y0'))
+    text = pdf.pq('LTTextLineHorizontal:overlaps_bbox("%s, %s, %s, %s")' % (left_corner, bottom_corner, left_corner+500, bottom_corner)).text()
+    text = text.split(" ")
+    text = text[-1]
+    text = clean_box_data_results(text)
+    return text
+
+def less_deductions_item_l(pdf,page):
+    label = pdf.pq('LTTextLineHorizontal:contains("LESS: DEDUCTIONS")')
+    left_corner = float(label.attr('x0'))
+    bottom_corner = float(label.attr('y0'))
+    text = pdf.pq('LTTextLineHorizontal:overlaps_bbox("%s, %s, %s, %s")' % (left_corner, bottom_corner, left_corner+600, bottom_corner)).text()
+    text = text.split(" ")
+    text = text[-1]
+    text = clean_box_data_results(text) * -1.0
+    return text
     
 def location_of_detail_left_edge(pdf):
     label = pdf.pq('LTTextLineHorizontal:contains("Ordinary business income (loss)")')
@@ -317,6 +344,7 @@ def get_box_detail(pdf):
                 "box_11_1" : box_11_1_data(pdf,x_1,x_2),
                 "box_11_2" : box_11_2_data(pdf,x_1,x_2),
                 "box_11_3" : box_11_3_data(pdf,x_1,x_2),
+                "box_12" : box_12_data(pdf,x_1,x_2),
                 "box_13_1" : box_13_1_data(pdf,x_1,x_2),
                 "box_13_2" : box_13_2_data(pdf,x_1,x_2),
                 "box_13_3" : box_13_3_data(pdf,x_1,x_2),
@@ -355,11 +383,68 @@ def page_numbers(path):
         pages["Item_11_detail"] = [page_pq.layout.pageid,line_11.attr('x0'),line_11.attr('y0'),item_l.attr('x1'),item_l.attr('y1')]
     return pages
 
-path = "k1_3.pdf"
-pages = page_numbers(path)
-print(pages)
-data = gen_data(path,pages)
-print(data)
+def calculate_other_income(data,box_data):
+    box_data_copy = box_data
+    data_copy = data
+    box_data_copy["box_6a"] = box_data_copy["box_6a"] - box_data_copy["box_6b"]
+    non_income_boxes = ["box_12","box_13_1","box_13_2","box_13_3"]
+    total_income_in_boxes = 0.0
+    for box in box_data_copy:
+        if isinstance(box_data_copy[box], float) and not (box in non_income_boxes):
+            total_income_in_boxes += box_data_copy[box]
+    other_income = data['summary_income_loss_item_l'] - total_income_in_boxes
+    #print(other_income)
+    for box in box_data:
+        if box[0:6] == "box_11" and box_data[box] == "STMT":
+            box_data[box] = other_income
+    return box_data
 
+def calculate_other_deductions(data,box_data):
+    box_data_copy = box_data
+    data_copy = data
+    box_data_copy["box_6a"] = box_data_copy["box_6a"] - box_data_copy["box_6b"]
+    non_income_boxes = ["box_12","box_13_1","box_13_2","box_13_3"]
+    total_ded_in_boxes = 0.0
+    for box in box_data_copy:
+        if isinstance(box_data_copy[box], float) and (box in non_income_boxes):
+            total_ded_in_boxes -= box_data_copy[box]
+    other_ded = data['less_deductions_item_l'] + total_ded_in_boxes
+    #print(other_ded)
+    for box in box_data:
+        if box[0:6] == "box_13" and box_data[box] == "STMT":
+            box_data[box] = other_ded
+    return box_data
 
+def tax_rate(box):
+    rates = {
+        "short_term" : 0.50,
+        "long_term" : 0.30,
+        "collectibles" : 0.28,
+        "deductions" : 0.50
+    }
+    types = {
+    "short_term" : ['1','2','3','4','5','6a','7','8','9c','10','11','14'],
+    "long_term" : ['6b','9a'],
+    "collectibles" : ['9b'],
+    "deductions" : ['12','13']
+    }
+    for t in types:
+        for b in types[t]:
+            #print("box_" + b)
+            #print(box[:len("box_" + b)])
+            if ("box_" + b) == box[:len(("box_" + b))]:
+                rate = rates[t]
+    return rate
 
+path = "pdfs/k1_3.pdf"
+#pages = page_numbers(path)
+#data = gen_data(path,pages)
+#print(data)
+
+print(tax_rate("box_1"))
+
+#pdf = pdfquery.PDFQuery(path)
+#pdf.load(2)
+#pdf.tree
+
+#pdf.tree.write("test2.xml", pretty_print=True, encoding="utf-8")
